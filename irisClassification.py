@@ -12,20 +12,16 @@ Created on Wed Apr 15 16:33:41 2020
 import pandas as pd
 import numpy as np
 
-from sklearn.model_selection import train_test_split
-
-from sklearn.preprocessing import StandardScaler
-
-from sklearn.compose import ColumnTransformer
-from sklearn.preprocessing import LabelEncoder, OneHotEncoder
-
-from sklearn.neighbors import KNeighborsClassifier
-
 from sklearn.metrics import confusion_matrix
 
 #%%###################
 # Data preprocessing #
 ######################
+
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.compose import ColumnTransformer
+from sklearn.preprocessing import LabelEncoder, OneHotEncoder
 
 dataset = pd.read_csv('iris.csv')
 
@@ -57,6 +53,8 @@ Y_test = np.array(ct.transform(Y_test))
 # KNeighborsClassifier #
 ########################
 
+from sklearn.neighbors import KNeighborsClassifier
+
 neighbor_classifier = KNeighborsClassifier(n_neighbors=5)
 neighbor_classifier.fit(X_train, Y_train)
 
@@ -64,21 +62,40 @@ y_pred_train = neighbor_classifier.predict(X_train)
 
 cm = confusion_matrix(Y_train.argmax(axis=1), y_pred_train.argmax(axis=1))
 
-print("Accuracy on train set:", (cm[0,0]+cm[1,1]+cm[2,2]) / len(y_pred_train))
+print("KNeighborsClassifier accuracy on train set:", (cm[0,0]+cm[1,1]+cm[2,2]) / len(y_pred_train))
 
 y_pred_test = neighbor_classifier.predict(X_test)
 
 cm = confusion_matrix(Y_test.argmax(axis=1), y_pred_test.argmax(axis=1))
 
-print("Accuracy on test set:", (cm[0,0]+cm[1,1]+cm[2,2]) / len(y_pred_test))
+print("KNeighborsClassifier accuracy on test set:", (cm[0,0]+cm[1,1]+cm[2,2]) / len(y_pred_test))
 
 # Accuracy on train set: 0.9583333333333334
 # Accuracy on test set: 1.0
 
+#%%##########
+#    SVM    #
+#############
 
+from sklearn.svm import SVC
 
+svc_classifier = SVC()
+svc_classifier.fit(X_train, Y_train.argmax(axis=1))
 
+y_pred_train = svc_classifier.predict(X_train)
 
+cm = confusion_matrix(Y_train.argmax(axis=1), y_pred_train)
+
+print("SVC accuracy on train set:", (cm[0,0]+cm[1,1]+cm[2,2]) / len(y_pred_train))
+
+y_pred_test = svc_classifier.predict(X_test)
+
+cm = confusion_matrix(Y_test.argmax(axis=1), y_pred_test)
+
+print("SVC accuracy on test set:", (cm[0,0]+cm[1,1]+cm[2,2]) / len(y_pred_test))
+
+# Accuracy on train set: 0.9583333333333334
+# Accuracy on test set: 1.0
 
 
 
