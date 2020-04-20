@@ -46,6 +46,21 @@ ct = ColumnTransformer([('encoder', OneHotEncoder(), [0])], remainder='passthrou
 Y_train = np.array(ct.fit_transform(Y_train))
 Y_test = np.array(ct.transform(Y_test))
 
+# For k-fold cross validation
+X_kfold_scaler = StandardScaler()
+X_kfold = X_kfold_scaler.fit_transform(X)
+
+Y_kfold = Y_labelEncoder.transform(Y)
+
+Y_kfold = np.array(Y_kfold).reshape( (len(Y_kfold), 1) )
+Y_kfold = np.array(ct.transform(Y_kfold))
+
+from sklearn.utils import shuffle
+
+X_kfold, Y_kfold = shuffle(X_kfold, Y_kfold)
+
+Y_kfold = Y_kfold[:, 1:]
+
 # Moved to neural network, confusion matrixes don't like this
 # Y_train = Y_train[:, 1:]
 # Y_test = Y_test[:, 1:]
@@ -102,55 +117,38 @@ print("SVC accuracy on test set:", (cm[0,0]+cm[1,1]+cm[2,2]) / len(y_pred_test))
 # Building Neural Network #
 ###########################
 
-from keras.wrappers.scikit_learn import KerasClassifier
-from sklearn.model_selection import GridSearchCV
 from keras.models import Sequential
 from keras.layers import Dense
+from keras.layers import BatchNormalization
 
-Y_train = Y_train[:, 1:]
-Y_test = Y_test[:, 1:]
-
-def build_classifier(n_neur1, n_neur2, n_neur3, optimizer):
+def build_classifier(n_neur1 = 32, n_neur2 = 32, n_neur3 = 16, optimizer = 'rmsprop'):
     model = Sequential()
     model.add( Dense(n_neur1, activation = 'relu', input_dim = 4) )
+    model.add( BatchNormalization() )
     model.add( Dense(n_neur2, activation = 'relu') )
+    model.add( BatchNormalization() )
     model.add( Dense(n_neur3, activation = 'relu') )
+    model.add( BatchNormalization() )
     model.add( Dense(2, activation = 'softmax') )
     model.compile(optimizer, loss='categorical_crossentropy', metrics = ['accuracy'])
     return model
 
-#%%######################
-# Tuning Neural Network #
-#########################
-
-# model = KerasClassifier(build_fn = build_classifier)
-
-# parameters = { 
-#     'batch_size' : [8, 16, 32],
-#     'n_neur1' : [8, 16, 32],
-#     'n_neur2' : [4, 8, 16],
-#     'n_neur3' : [4, 8, 16],
-#     'optimizer' : ['adam', 'rmsprop'],
-#     'epochs' : [80]
-#     }
-
-# grid_search = GridSearchCV(model, parameters, scoring = 'accuracy', cv = 10)
-
-# # Y_train.argmax(axis=1) because grid search was confused about categorical output
-# grid_search = grid_search.fit(X_train, Y_train.argmax(axis=1), use_multiprocessing = True, workers=8)
-
-# best_parameters = grid_search.best_params_
-# best_accuracy = grid_search.best_score_
+Y_train = Y_train[:, 1:]
+Y_test = Y_test[:, 1:]
 
 #%%#############################
 # Final fitting Neural Network #
 ################################
 
-model = build_classifier(32,16,8,'rmsprop')
+from keras.optimizers import RMSprop
+
+optimizer = RMSprop(learning_rate = 0.001)
+
+model = build_classifier(32,32,16,optimizer)
 
 model.summary()
 
-history = model.fit(X_train, Y_train, batch_size = 32, epochs = 80, validation_data = (X_test, Y_test))
+history = model.fit(X_train, Y_train, batch_size = 16, epochs = 80, validation_data = (X_test, Y_test))
 
 acc = history.history['accuracy']
 val_acc = history.history['val_accuracy']
@@ -175,7 +173,18 @@ plt.ylabel('Loss')
 plt.legend()
 plt.show()
 
+#%%########################
+# K-FOLD CROSS-VALIDATION #
+###########################
 
+from sklearn.model_selection import cross_val_score
+from keras.wrappers.scikit_learn import KerasClassifier
+
+model_kfold = KerasClassifier(build_fn = build_classifier, batch_size = 16, epochs = 80)
+
+scores = cross_val_score(model_kfold, X_kfold, Y_kfold, cv=10)
+
+print('Accuracy', scores.mean(), '( +/-', scores.std(), ')')
 
 
 
